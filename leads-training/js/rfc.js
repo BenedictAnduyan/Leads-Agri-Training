@@ -26,8 +26,10 @@ function rfcInitRows(d) { d.rows = {}; Object.keys(RFC_LINES).forEach((l) => { d
 function rfcSyncNames(d) { Object.keys(RFC_LINES).forEach((l) => { d[RFC_LINES[l]] = rfcJoin(d.rows[l]); }); }
 function rfcPickData(d, line) {
   const names = db.rfc.signerNames || {}, rows = d.rows[line];
-  return rows.map((r, n) => ({ line, n, text: r.text, custom: r.sel === 'other', canDel: line === 'recommended' && rows.length > 1,
-    opts: [{ v: '', label: 'Select a name...', sel: r.sel === '' }, ...Object.keys(names).map((k) => ({ v: k, label: names[k], sel: r.sel === k })), { v: 'other', label: 'Other (type a name)', sel: r.sel === 'other' }] }));
+  return rows.map((r, n) => ({
+    line, n, text: r.text, custom: r.sel === 'other', canDel: line === 'recommended' && rows.length > 1,
+    opts: [{ v: '', label: 'Select a name...', sel: r.sel === '' }, ...Object.keys(names).map((k) => ({ v: k, label: names[k], sel: r.sel === k })), { v: 'other', label: 'Other (type a name)', sel: r.sel === 'other' }]
+  }));
 }
 function rfcPickSel(el) { const d = ui.rfc.draft, r = d.rows[el.dataset.line][+el.dataset.n]; r.sel = el.value; if (el.value !== 'other') r.text = ''; rfcSyncNames(d); render(); }
 function rfcPickText(el) { const d = ui.rfc.draft; d.rows[el.dataset.line][+el.dataset.n].text = el.value; rfcSyncNames(d); rfcDraw(); }
@@ -59,8 +61,10 @@ function rfcAddSupplier() {
   supplierForm('', { modal: true, name: rfcVendorSelValue(d) === RFC_OTHER ? (d.vendorName || '') : '', onSaved: (sup) => { d.vendorSel = sup.id; d.vendorName = sup.name; d.vendorTin = sup.tin || ''; d.vendorAddress = sup.address || ''; } });
 }
 function rfcBlank() {
-  return { id: '', employeeName: me.name, accountNumber: '', vendorName: '', vendorAddress: '', vendorTin: '', dateNeeded: '', dateOfCheck: '', reason: 'Payment', purpose: '', note: 'Please see the attached files', instructions: '',
-    requestedBy: me.name, recommendedBy: db.rfc.defaults.recommendedBy, approvedBy: db.rfc.defaults.approvedBy, requestedDate: rfcToday(), recommendedDate: '', approvedDate: '', items: [rfcItem()] };
+  return {
+    id: '', employeeName: me.name, accountNumber: '', vendorName: '', vendorAddress: '', vendorTin: '', dateNeeded: '', dateOfCheck: '', reason: 'Payment', purpose: '', note: 'Please see the attached files', instructions: '',
+    requestedBy: me.name, recommendedBy: db.rfc.defaults.recommendedBy, approvedBy: db.rfc.defaults.approvedBy, requestedDate: rfcToday(), recommendedDate: '', approvedDate: '', items: [rfcItem()]
+  };
 }
 
 /* ---------- the page: list, form, or one saved request ---------- */
@@ -72,8 +76,10 @@ function rfcNavItem(lk, sec) {
   const S = db.rfc && db.rfc.sign, sign = sec === 'rfc' && rfcSub() === 'sign', n = S ? S.pending : 0;
   const main = lk('rfc', 'Request for Check' + (n ? ' (' + n + ')' : ''), sec === 'rfc' && !sign, 'return rfcHome()');
   if (!S) return main;
-  return { key: 'rfc', ...main, cls: sec === 'rfc' ? 'active' : '', hasSub: true,
-    sub: [lk('rfc', 'My Requests', sec === 'rfc' && !sign, 'return rfcHome()'), lk('rfc/sign', 'For Signing' + (n ? ' (' + n + ')' : ''), sign, 'return rfcSignHome()')] };
+  return {
+    key: 'rfc', ...main, cls: sec === 'rfc' ? 'active' : '', hasSub: true,
+    sub: [lk('rfc', 'My Requests', sec === 'rfc' && !sign, 'return rfcHome()'), lk('rfc/sign', 'For Signing' + (n ? ' (' + n + ')' : ''), sign, 'return rfcSignHome()')]
+  };
 }
 function rfcPage() {
   if (!db.rfc) return message('Request for Check', db.rfcSetup ? 'The Request for Check tables need to be set up. In phpMyAdmin, import migration_rfc.sql (first time only) and reload this page.' : 'This page is not available.', me.role === 'admin' ? '/admin' : '/home', 'Back to Home');
@@ -85,8 +91,10 @@ function rfcPage() {
 }
 function rfcListView() {
   const L = db.rfc.requests, admin = me.role === 'admin';
-  return tpl('tpl-rfc-list', { empty: !L.length, isAdmin: admin, intro: admin ? 'All requests for check made by the employees and the administrator.' : 'Your requests for check. Fill in a request, save it, then e-sign it in For Signing, or print it and sign it by hand.',
-    rows: L.map((r) => ({ id: r.id, isAdmin: admin, no: rfcNo(r.id), vendor: r.vendorName, reason: r.reason, items: r.items.length + (r.items.length === 1 ? ' item' : ' items'), total: peso(r.total), needed: r.dateNeeded ? fmt(r.dateNeeded) : '-', esig: r.stepCount ? r.signedCount + ' of ' + r.stepCount + ' e-signed' : '-', owner: r.owner || '-', created: fmt(r.createdAt) })) });
+  return tpl('tpl-rfc-list', {
+    empty: !L.length, isAdmin: admin, intro: admin ? 'All requests for check made by the employees and the administrator.' : 'Your requests for check. Fill in a request, save it, then e-sign it in For Signing, or print it and sign it by hand.',
+    rows: L.map((r) => ({ id: r.id, isAdmin: admin, no: rfcNo(r.id), vendor: r.vendorName, reason: r.reason, items: r.items.length + (r.items.length === 1 ? ' item' : ' items'), total: peso(r.total), needed: r.dateNeeded ? fmt(r.dateNeeded) : '-', esig: r.stepCount ? r.signedCount + ' of ' + r.stepCount + ' e-signed' : '-', owner: r.owner || '-', created: fmt(r.createdAt) }))
+  });
 }
 function rfcNew() { ui.rfc = { mode: 'form', draft: rfcInitRows(rfcBlank()) }; render(); window.scrollTo(0, 0); }
 function rfcOpen(id, mode) { const r = db.rfc.requests.find((x) => x.id === id); if (!r) return; ui.rfc = { mode, draft: rfcInitRows(rfcCopy(r)) }; render(); window.scrollTo(0, 0); }
@@ -104,10 +112,12 @@ function rfcViewPage() {
 /* ---------- the form ---------- */
 function rfcFormView() {
   const d = ui.rfc.draft;
-  const f = tpl('tpl-rfc-form', { ...d, heading: d.id ? 'Edit request for check (' + rfcNo(d.id) + ')' : 'New request for check', people: db.rfc.people, total: peso(rfcTotal(d)), namesOpen: ui.rfcNames !== false, namesBtn: ui.rfcNames !== false ? 'Minimize' : 'Maximize', pickRecommended: rfcPickData(d, 'recommended'), pickApproved: rfcPickData(d, 'approved'),
+  const f = tpl('tpl-rfc-form', {
+    ...d, heading: d.id ? 'Edit request for check (' + rfcNo(d.id) + ')' : 'New request for check', people: db.rfc.people, total: peso(rfcTotal(d)), namesOpen: ui.rfcNames !== false, namesBtn: ui.rfcNames !== false ? 'Minimize' : 'Maximize', pickRecommended: rfcPickData(d, 'recommended'), pickApproved: rfcPickData(d, 'approved'),
     recommendedBy: d.recommendedBy || '-', approvedBy: d.approvedBy || '-', reasons: RFC_REASONS.map((v) => ({ v, checked: d.reason === v })),
     vendorOpts: rfcVendorOpts(d), vendorOther: rfcVendorSelValue(d) === RFC_OTHER,
-    items: d.items.map((it, i) => ({ i, title: 'Item ' + (i + 1), name: it.name, units: it.units, amount: it.amount, noUsers: !it.users.length, users: it.users.map((u, k) => ({ i, u: k, name: u.name, detail: u.detail })) })) });
+    items: d.items.map((it, i) => ({ i, title: 'Item ' + (i + 1), name: it.name, units: it.units, amount: it.amount, noUsers: !it.users.length, users: it.users.map((u, k) => ({ i, u: k, name: u.name, detail: u.detail })) }))
+  });
   slot(f, 'sheet', rfcSheet(d)); return f;
 }
 function rfcToggleNames() { ui.rfcNames = ui.rfcNames === false; render(); } // minimize / maximize the "Names for the signature lines" box (the chosen names are kept in the draft)
@@ -150,11 +160,13 @@ function rfcSheet(d, sigs) { // sigs = e-signatures to print above the names (no
     const n = Number(i.units) || 1, us = (i.users || []).filter((u) => u.name.trim());
     return { title: '(' + n + ' Unit' + (n === 1 ? '' : 's') + ')  ' + i.name, amount: peso(i.amount), hasUsers: us.length > 0, users: us.map((u) => ({ text: u.name.trim() + (u.detail.trim() ? ' (' + u.detail.trim() + ')' : '') })) };
   });
-  return rfcSigFallback(tpl('tpl-rfc-sheet', { employeeName: d.employeeName, accountNumber: d.accountNumber, vendorName: d.vendorName, vendorAddress: d.vendorAddress, vendorTin: d.vendorTin,
+  return rfcSigFallback(tpl('tpl-rfc-sheet', {
+    employeeName: d.employeeName, accountNumber: d.accountNumber, vendorName: d.vendorName, vendorAddress: d.vendorAddress, vendorTin: d.vendorTin,
     needed: rfcDate(d.dateNeeded), check: rfcDate(d.dateOfCheck), reasons: RFC_REASONS.map((r) => ({ label: r, mark: d.reason === r ? '✔' : '' })), lines,
     hasPurpose: !!d.purpose.trim(), purpose: d.purpose, hasNote: !!d.note.trim(), note: d.note, instructions: d.instructions, total: peso(rfcTotal(d)),
     reqSigs: rfcBlocks(d.requestedBy, 'requested', sigs), recSigs: rfcBlocks(d.recommendedBy, 'recommended', sigs), appSigs: rfcBlocks(d.approvedBy, 'approved', sigs),
-    requestedBy: d.requestedBy, recommendedBy: d.recommendedBy, approvedBy: d.approvedBy, reqDate: rfcDate(d.requestedDate), recDate: rfcDate(d.recommendedDate), appDate: rfcDate(d.approvedDate) }));
+    requestedBy: d.requestedBy, recommendedBy: d.recommendedBy, approvedBy: d.approvedBy, reqDate: rfcDate(d.requestedDate), recDate: rfcDate(d.recommendedDate), appDate: rfcDate(d.approvedDate)
+  }));
 }
 // one block per printed name ("Jel Mabato | Sherwin" = two blocks), each with its e-signature above the name when that person has signed
 // (the Requested by line is matched by its line, because it is always the one who made the request; the other lines by the name of the fixed signer)
@@ -196,8 +208,10 @@ function rfcSignPage() {
   if (!S) return message('For Signing', db.rfc.signSetup ? 'E-signing needs the table rfc_signatures. Import sql/schema.sql in phpMyAdmin (this resets the demo data), or ask the administrator.' : 'This page is not available.', me.role === 'admin' ? '/admin' : '/home', 'Back to Home');
   const z = rfcSignState();
   if (z.id) { const c = S.cards.find((x) => x.id === z.id); if (c && rfcReq(c)) return rfcSignDetail(c, z); z.id = ''; z.key = ''; z.adding = false; }
-  const f = tpl('tpl-rfc-sign-list', { q: z.q, filters: RFC_SIGN_FILTERS.map((x) => ({ v: x[0], label: x[1], sel: z.f === x[0] })),
-    intro: S.admin ? 'Every request for check, one card for each RFC number, with its signature lines in signing order: Requested by, then Recommended by, then Approved by. As the admin you can review and e-sign any line.' : 'Requests for check that carry your name. A line can be signed only after the lines before it are signed. Your e-signature comes from your Profile.' });
+  const f = tpl('tpl-rfc-sign-list', {
+    q: z.q, filters: RFC_SIGN_FILTERS.map((x) => ({ v: x[0], label: x[1], sel: z.f === x[0] })),
+    intro: S.admin ? 'Every request for check, one card for each RFC number, with its signature lines in signing order: Requested by, then Recommended by, then Approved by. As the admin you can review and e-sign any line.' : 'Requests for check that carry your name. A line can be signed only after the lines before it are signed. Your e-signature comes from your Profile.'
+  });
   rfcSignFill(f); return f;
 }
 function rfcSignFilter() { // the cards that match the search box and the filter
@@ -215,13 +229,17 @@ function rfcSignFilter() { // the cards that match the search box and the filter
 }
 function rfcSignCard(c) {
   const S = db.rfc.sign, r = rfcReq(c);
-  return tpl('tpl-rfc-sign-card', { no: rfcNo(r.id), vendor: r.vendorName, total: peso(r.total), reason: r.reason, owner: r.owner || '-', created: fmt(r.createdAt),
+  return tpl('tpl-rfc-sign-card', {
+    no: rfcNo(r.id), vendor: r.vendorName, total: peso(r.total), reason: r.reason, owner: r.owner || '-', created: fmt(r.createdAt),
     statusLabel: r.closed ? '✓ Closed' : r.signedCount + ' of ' + r.stepCount + ' signed', statusCls: r.closed ? 'green' : 'orange',
     steps: r.steps.map((s, i) => {
       const mine = s.key === S.mineKey, act = !s.signed && s.ready;
-      return { n: i + 1, label: RFC_SLOT_LABEL[s.slot], name: s.name, id: r.id, key: s.key, hasBtn: S.admin || mine, btn: act ? 'Review & sign' : 'View', btnCls: act ? '' : 'ghost',
-        status: s.signed ? '✓ Signed ' + fmt(s.at) : s.ready ? (mine ? 'Waiting for your signature' : 'Waiting for signature') : 'Waiting for ' + s.waitingFor, cls: s.signed ? 'green' : s.ready ? 'orange' : 'gray' };
-    }) });
+      return {
+        n: i + 1, label: RFC_SLOT_LABEL[s.slot], name: s.name, id: r.id, key: s.key, hasBtn: S.admin || mine, btn: act ? 'Review & sign' : 'View', btnCls: act ? '' : 'ghost',
+        status: s.signed ? '✓ Signed ' + fmt(s.at) : s.ready ? (mine ? 'Waiting for your signature' : 'Waiting for signature') : 'Waiting for ' + s.waitingFor, cls: s.signed ? 'green' : s.ready ? 'orange' : 'gray'
+      };
+    })
+  });
 }
 function rfcSignFill(root) { // draws the cards and the count (also used while typing in the search box, so the cursor stays where it is)
   const S = db.rfc.sign, list = rfcSignFilter();
@@ -252,8 +270,10 @@ function rfcSignDetail(c, z) {
   else if (!ready.length) hint = (own ? 'Not your turn yet. ' : '') + 'Waiting for ' + (left.length ? left[0].waitingFor : 'the lines before') + ' to sign first.';
   else if (!usable) hint = own ? 'You have not added an e-signature yet. Add it in Profile, then come back to sign.' : nm + ' has not added an e-signature in Profile yet.';
   else hint = 'Check the request, then press Add e-signature' + (own ? '.' : ' for ' + nm + ' (as admin).');
-  const f = tpl('tpl-rfc-sign-detail', { no: rfcNo(r.id), vendor: r.vendorName, canAdd: canSign && !z.adding, adding: canSign && z.adding, needProfile: own && ready.length > 0 && !usable, signed,
-    signedText: signed ? 'Signed ' + fmt(mine.map((s) => s.at).sort().pop()) : '', hint });
+  const f = tpl('tpl-rfc-sign-detail', {
+    no: rfcNo(r.id), vendor: r.vendorName, canAdd: canSign && !z.adding, adding: canSign && z.adding, needProfile: own && ready.length > 0 && !usable, signed,
+    signedText: signed ? 'Signed ' + fmt(mine.map((s) => s.at).sort().pop()) : '', hint
+  });
   slot(f, 'sheet', rfcSheet(r, sigs)); return f;
 }
 function rfcSignAdd() { rfcSignState().adding = true; render(); }

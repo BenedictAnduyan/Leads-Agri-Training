@@ -105,9 +105,11 @@ function confirmBox(o) {
   return new Promise((resolve) => {
     const old = $id('confirmdlg'); if (old) old.remove();
     const s = o.stats || [];
-    const f = tpl('tpl-confirm', { title: o.title, text: o.text || '', file: o.file || '', hasFile: !!o.file, hasStats: s.length === 3,
+    const f = tpl('tpl-confirm', {
+      title: o.title, text: o.text || '', file: o.file || '', hasFile: !!o.file, hasStats: s.length === 3,
       n1: s[0] ? s[0][0] : '', l1: s[0] ? s[0][1] : '', n2: s[1] ? s[1][0] : '', l2: s[1] ? s[1][1] : '', n3: s[2] ? s[2][0] : '', l3: s[2] ? s[2][1] : '',
-      yesLabel: o.yes || 'OK', noLabel: o.no || 'Cancel' });
+      yesLabel: o.yes || 'OK', noLabel: o.no || 'Cancel'
+    });
     const box = f.querySelector('#confirmdlg');
     const done = (v) => { document.removeEventListener('keydown', onKey); box.remove(); resolve(v); };
     const onKey = (e) => { if (e.key === 'Escape') done(false); };
@@ -226,10 +228,12 @@ function sideModel(groups) {
   const m = sideMap();
   return groups.map((g) => {
     const open = g.key in m ? m[g.key] : true; sideEff[g.key] = open;
-    return { isMenu: true, key: g.key, label: g.label, open, chev: open ? '▾' : '▸', children: g.children.map((c) => {
-      const on = c.hasSub && (c.cls || c.sub.some((s) => s.cls)), subOpen = c.hasSub ? (c.key in m ? m[c.key] : !!on) : false; if (c.hasSub) sideEff[c.key] = subOpen;
-      return { ...c, subOpen, chev: subOpen ? '▾' : '▸' };
-    }) };
+    return {
+      isMenu: true, key: g.key, label: g.label, open, chev: open ? '▾' : '▸', children: g.children.map((c) => {
+        const on = c.hasSub && (c.cls || c.sub.some((s) => s.cls)), subOpen = c.hasSub ? (c.key in m ? m[c.key] : !!on) : false; if (c.hasSub) sideEff[c.key] = subOpen;
+        return { ...c, subOpen, chev: subOpen ? '▾' : '▸' };
+      })
+    };
   });
 }
 function employeeLayout(sec, page) {
@@ -279,7 +283,7 @@ document.addEventListener('click', (e) => {
 function userMenu() { ['ps', 'pn'].forEach((id) => { const p = $id(id); if (p) p.classList.add('hidden'); }); toggle('pu'); }
 function openNotes() {
   toggle('pn');
-  if (!$id('pn').classList.contains('hidden')) { db.notifications.forEach((n) => { n.read = true; }); api('employee', 'mark_read', {}).catch(() => {}); const c = $id('cnt'); if (c) c.remove(); }
+  if (!$id('pn').classList.contains('hidden')) { db.notifications.forEach((n) => { n.read = true; }); api('employee', 'mark_read', {}).catch(() => { }); const c = $id('cnt'); if (c) c.remove(); }
 }
 
 /* ---------- corrective actions assigned to the employee as immediate head / supervisor ---------- */
@@ -290,9 +294,13 @@ function pendFor(ts) {
 }
 function correctiveView() {
   const L = db.corrective || [], sel = L.find((x) => x.id === ui.corr);
-  const f = tpl('tpl-corrective-page', { empty: !L.length, items: L.map((x) => ({ id: x.id, name: x.supplier, status: x.status === 'Resolved' ? 'Solved' : 'Pending', cls: 'badge ' + CLS[x.status === 'Resolved' ? 'Completed' : 'Overdue'],
-    info: 'Evaluated by ' + x.evaluator + ' on ' + fmt(x.evaluationDate), pend: x.status === 'Resolved' || !x.submittedAt ? '' : 'Pending for ' + pendFor(x.submittedAt),
-    pcls: 'badge ' + ((Date.now() - new Date(x.submittedAt).getTime()) / 60000 < 1440 ? 'blue' : (Date.now() - new Date(x.submittedAt).getTime()) / 60000 < 4320 ? 'orange' : 'red') })) });
+  const f = tpl('tpl-corrective-page', {
+    empty: !L.length, items: L.map((x) => ({
+      id: x.id, name: x.supplier, status: x.status === 'Resolved' ? 'Solved' : 'Pending', cls: 'badge ' + CLS[x.status === 'Resolved' ? 'Completed' : 'Overdue'],
+      info: 'Evaluated by ' + x.evaluator + ' on ' + fmt(x.evaluationDate), pend: x.status === 'Resolved' || !x.submittedAt ? '' : 'Pending for ' + pendFor(x.submittedAt),
+      pcls: 'badge ' + ((Date.now() - new Date(x.submittedAt).getTime()) / 60000 < 1440 ? 'blue' : (Date.now() - new Date(x.submittedAt).getTime()) / 60000 < 4320 ? 'orange' : 'red')
+    }))
+  });
   if (sel) {
     const box = document.createDocumentFragment();
     box.append(tpl('tpl-detail-list', { title: 'Corrective action: ' + sel.supplier, fields: [{ label: 'Evaluated by', value: sel.evaluator }, { label: 'Evaluation Date', value: fmt(sel.evaluationDate) }, { label: 'Issue Identified', value: sel.issueIdentified || '-' }] }));
@@ -307,10 +315,14 @@ function openCorrective(id) { ui.corr = id; render(); }
 function homeView() {
   const list = myCourses(me.id).filter((x) => !isEvalCourse(x.course)), n = (s) => list.filter((x) => x.info.status === s).length; // the evaluation form is under Supplier Evaluation, not here
   const active = list.find((x) => x.info.status === 'In Progress') || list.find((x) => x.info.status === 'Not Started'), cur = active && active.info.current, cp = cur && prog(me.id, cur.id);
-  const d = { firstName: me.name.split(' ')[0], hasActive: !!cur, noActive: !cur, noActiveText: list.length ? 'All assigned courses are completed. Well done!' : 'You have no assigned courses yet.',
-    stats: [['Assigned Courses', list.length], ['Completed', n('Completed')], ['In Progress', n('In Progress')], ['Not Started', n('Not Started')]].map((s) => ({ label: s[0], value: s[1] })) };
-  if (cur) Object.assign(d, { activeTitle: courseTitle(active.course, me.id), overall: active.info.pct, overallText: 'Overall: ' + active.info.pct + '% · ' + active.info.done + ' / ' + active.info.total + ' training cards completed',
-    currentText: 'Current: Card ' + (active.info.currentIdx + 1) + ' - ' + evalText(active.course, cur.title, me.id), curType: cur.type.toUpperCase(), cardPct: (cp && cp.pct) || 0, cardPctText: 'Card progress: ' + ((cp && cp.pct) || 0) + '%', continueLink: '#/training/' + active.course.id + '/' + cur.id });
+  const d = {
+    firstName: me.name.split(' ')[0], hasActive: !!cur, noActive: !cur, noActiveText: list.length ? 'All assigned courses are completed. Well done!' : 'You have no assigned courses yet.',
+    stats: [['Assigned Courses', list.length], ['Completed', n('Completed')], ['In Progress', n('In Progress')], ['Not Started', n('Not Started')]].map((s) => ({ label: s[0], value: s[1] }))
+  };
+  if (cur) Object.assign(d, {
+    activeTitle: courseTitle(active.course, me.id), overall: active.info.pct, overallText: 'Overall: ' + active.info.pct + '% · ' + active.info.done + ' / ' + active.info.total + ' training cards completed',
+    currentText: 'Current: Card ' + (active.info.currentIdx + 1) + ' - ' + evalText(active.course, cur.title, me.id), curType: cur.type.toUpperCase(), cardPct: (cp && cp.pct) || 0, cardPctText: 'Card progress: ' + ((cp && cp.pct) || 0) + '%', continueLink: '#/training/' + active.course.id + '/' + cur.id
+  });
   const f = tpl('tpl-home', d);
   slot(f, 'courses', tpl('tpl-courselist', { courses: list.map(courseCardData), empty: !list.length, emptyText: 'No courses assigned. Your administrator will assign training to you.' }));
   return f;
@@ -337,8 +349,10 @@ function detailView(id) {
     progressText: 'Progress: ' + i.pct + '% · ' + i.done + ' of ' + i.total + ' cards completed', pct: i.pct, noCards: !c.cards.length,
     cards: c.cards.map((k, n) => {
       const st = cardStatus(me.id, c, n), p = prog(me.id, k.id), locked = st === 'Locked';
-      return { no: 'Card ' + (n + 1), title: evalText(c, k.title, me.id), type: k.type.toUpperCase(), ...badgeOf(st), cls: locked ? 'locked' : '', href: locked ? null : '#/training/' + c.id + '/' + k.id, ariaDisabled: locked ? 'true' : null, locked,
-        attempts: p && p.attempt ? (k.kind === 'evaluation' ? 'Evaluations submitted: ' + p.attempt : 'Attempts: ' + p.attempt + ' · Best score: ' + p.best + '%') : '', cardPct: (st === 'In Progress' || st === 'Failed') ? 'Card progress: ' + ((p && p.pct) || 0) + '%' : '' };
+      return {
+        no: 'Card ' + (n + 1), title: evalText(c, k.title, me.id), type: k.type.toUpperCase(), ...badgeOf(st), cls: locked ? 'locked' : '', href: locked ? null : '#/training/' + c.id + '/' + k.id, ariaDisabled: locked ? 'true' : null, locked,
+        attempts: p && p.attempt ? (k.kind === 'evaluation' ? 'Evaluations submitted: ' + p.attempt : 'Attempts: ' + p.attempt + ' · Best score: ' + p.best + '%') : '', cardPct: (st === 'In Progress' || st === 'Failed') ? 'Card progress: ' + ((p && p.pct) || 0) + '%' : ''
+      };
     })
   });
 }
@@ -386,7 +400,7 @@ function trainingView(cid, kid) {
 }
 // Reading progress follows the real scroll position. The server keeps a copy.
 let readPending = Promise.resolve(), readSent = 0;
-function sendReading(kid, v) { readSent = v; readPending = api('employee', 'set_reading', { id: kid, reading: v }).catch(() => {}); }
+function sendReading(kid, v) { readSent = v; readPending = api('employee', 'set_reading', { id: kid, reading: v }).catch(() => { }); }
 function initReader() {
   const el = $id('reader'); if (!el) return;
   const kid = ui.quiz.cardId; readSent = rec(me.id, kid).reading;
@@ -453,8 +467,8 @@ async function sendSupport(e) {
 const profileView = () => {
   const f = tpl('tpl-profile', {
     initial: me.name[0], name: me.name, position: me.position, phone: me.phone, hasEsig: !!(db.esig && db.esig.has),
-  fields: [['Employee ID', me.employeeId], ['Email', me.email], ['Department', me.department], ['Position', me.position], ['Date Joined', fmt(me.joined)], ['Account Status', me.status]].map((r) => ({ label: r[0], value: r[1] || 'Not provided' })),
-  prefs: [['email', 'Email me about new assignments'], ['deadline', 'Remind me about deadlines']].map((r) => ({ key: r[0], label: r[1], checked: !!me.prefs[r[0]] }))
+    fields: [['Employee ID', me.employeeId], ['Email', me.email], ['Department', me.department], ['Position', me.position], ['Date Joined', fmt(me.joined)], ['Account Status', me.status]].map((r) => ({ label: r[0], value: r[1] || 'Not provided' })),
+    prefs: [['email', 'Email me about new assignments'], ['deadline', 'Remind me about deadlines']].map((r) => ({ key: r[0], label: r[1], checked: !!me.prefs[r[0]] }))
   });
   esigState.img = null; esigState.data = '';
   esigShow(f, db.esig && db.esig.has ? 'api/esig.php?user=' + me.id + '&v=' + db.esig.v : '');
@@ -523,7 +537,7 @@ async function esigRemove() {
   try { await api('esig', 'remove', {}); await refresh(); render(); say('esmsg', 'green', 'E-signature removed.'); }
   catch (e) { if (e.status === 401) { me = null; db = null; render(); return; } say('esmsg', 'red', e.message); }
 }
-function setPref(k, v) { me.prefs[k] = v; api('employee', 'set_pref', { key: k, value: v }).catch(() => {}); }
+function setPref(k, v) { me.prefs[k] = v; api('employee', 'set_pref', { key: k, value: v }).catch(() => { }); }
 
 /* ---------- supplier evaluation form (inside a training card) ---------- */
 function evaluationFrag() {
@@ -531,11 +545,17 @@ function evaluationFrag() {
   const box = document.createDocumentFragment();
   box.append(tpl('tpl-evalguide', { blocks: c.content.map((b) => ({ isH: b[0] === 'h', isP: b[0] === 'p', isUl: b[0] === 'ul', isOl: b[0] === 'ol', isWarn: b[0] === 'warn', text: typeof b[1] === 'string' ? evalT(b[1]) : '', items: Array.isArray(b[1]) ? b[1].map((t) => ({ text: evalT(t) })) : [] })) }));
   const mine = c.mine || [];
-  if (mine.length) box.append(tpl('tpl-eval-mine', { mine: mine.map((m) => ({ id: m.supplierId, name: m.supplier, info: 'Evaluated ' + fmt(m.date) + ' - ' + m.score.toFixed(1) + '% - ' + m.decision,
-    isPending: m.requestStatus === 'Pending', isApproved: m.requestStatus === 'Approved', isDeclined: m.requestStatus === 'Declined', canRequest: m.requestStatus === 'None' || m.requestStatus === 'Declined', requestLabel: m.requestStatus === 'Declined' ? 'Request again' : 'Request re-evaluation' })) }));
+  if (mine.length) box.append(tpl('tpl-eval-mine', {
+    mine: mine.map((m) => ({
+      id: m.supplierId, name: m.supplier, info: 'Evaluated ' + fmt(m.date) + ' - ' + m.score.toFixed(1) + '% - ' + m.decision,
+      isPending: m.requestStatus === 'Pending', isApproved: m.requestStatus === 'Approved', isDeclined: m.requestStatus === 'Declined', canRequest: m.requestStatus === 'None' || m.requestStatus === 'Declined', requestLabel: m.requestStatus === 'Declined' ? 'Request again' : 'Request re-evaluation'
+    }))
+  }));
   const kc = db.courses.find((x) => x.id === ui.quiz.courseId), kt = kc && kc.cards.find((k) => k.id === ui.quiz.cardId);
-  const f = tpl('tpl-evaluation', { formTitle: evalT(kt ? kt.title : 'IT Supplier & Third-Party Evaluation'), meetsLabel: '1. ' + evalT('Does the supplier meet IT requirements?') + ' *', evaluator: me.name, today, qStart: q.start, backHref: '#/courses/' + ui.quiz.courseId, periodText: q.label, suppliers: c.suppliers.map((x) => ({ id: x.id, name: x.name })),
-    fields: c.fields.map((x) => ({ label: x.label, description: x.description, weightText: 'Weight ' + x.weight + '%', rname: 'r_' + x.key })) });
+  const f = tpl('tpl-evaluation', {
+    formTitle: evalT(kt ? kt.title : 'IT Supplier & Third-Party Evaluation'), meetsLabel: '1. ' + evalT('Does the supplier meet IT requirements?') + ' *', evaluator: me.name, today, qStart: q.start, backHref: '#/courses/' + ui.quiz.courseId, periodText: q.label, suppliers: c.suppliers.map((x) => ({ id: x.id, name: x.name })),
+    fields: c.fields.map((x) => ({ label: x.label, description: x.description, weightText: 'Weight ' + x.weight + '%', rname: 'r_' + x.key }))
+  });
   const re = ui.quiz.again, s = re && c.suppliers.find((x) => x.id === re.supplierId); // "Start re-evaluation": same supplier and service, new ratings
   if (s) {
     f.querySelector('#ev-supplier').value = s.id; f.querySelector('#ev-category').value = s.category || ''; f.querySelector('#ev-person').value = s.contactPerson || '';
@@ -569,18 +589,26 @@ async function requestReeval(supplierId) { // the employee asks the supervisor f
 }
 function requestsView() { // the supervisor's list of re-evaluation requests
   const L = db.reevalInbox || [];
-  return tpl('tpl-reeval-page', { empty: !L.length, items: L.map((r) => ({ id: r.id, name: r.employee + ' - ' + r.supplier, info: 'Requested ' + fmt(r.createdAt), reason: 'Reason: ' + r.reason, hasReason: !!r.reason,
-    status: r.status === 'Used' ? 'Used' : r.status, cls: 'badge ' + (r.status === 'Approved' || r.status === 'Used' ? 'green' : r.status === 'Declined' ? 'red' : 'orange'), isPending: r.status === 'Pending' })) });
+  return tpl('tpl-reeval-page', {
+    empty: !L.length, items: L.map((r) => ({
+      id: r.id, name: r.employee + ' - ' + r.supplier, info: 'Requested ' + fmt(r.createdAt), reason: 'Reason: ' + r.reason, hasReason: !!r.reason,
+      status: r.status === 'Used' ? 'Used' : r.status, cls: 'badge ' + (r.status === 'Approved' || r.status === 'Used' ? 'green' : r.status === 'Declined' ? 'red' : 'orange'), isPending: r.status === 'Pending'
+    }))
+  });
 }
 function decideReeval(id, decision) { return call(supApi(), 'decide_reeval', { id, decision }); }
 async function submitEvaluation(e) {
   e.preventDefault();
   const fd = new FormData(e.target), g = (k) => (fd.get(k) || '').toString().trim(), ratings = {};
   ui.card.fields.forEach((f) => { ratings[f.key] = Number(fd.get('r_' + f.key) || 0); });
-  const data = { id: ui.quiz.cardId, supplierId: g('supplierId'), service: g('service'), criticality: g('criticality'), evaluationDate: g('evaluationDate'), ratings, meets: g('meets'), issues: g('issues'), corrective: g('corrective'),
-    recommendation: g('recommendation'), recommendationOther: g('recommendationOther'), comments: g('comments'), issueIdentified: g('issueIdentified') };
-  try { await readPending; ui.quiz.evalResult = await api('employee', 'submit_evaluation', data); ui.quiz.again = null; await refresh(); try { ui.card = await api('employee', 'card', { id: ui.quiz.cardId }); } catch (e2) { /* the list of your evaluations updates next time */ } ui.quiz.stage = 'evalresult'; render();
-    popup('Evaluation submitted', 'Your evaluation of ' + ui.quiz.evalResult.supplier + ' was submitted successfully (' + ui.quiz.evalResult.score.toFixed(1) + '% - ' + ui.quiz.evalResult.decision + '). The Supplier Master was updated.'); }
+  const data = {
+    id: ui.quiz.cardId, supplierId: g('supplierId'), service: g('service'), criticality: g('criticality'), evaluationDate: g('evaluationDate'), ratings, meets: g('meets'), issues: g('issues'), corrective: g('corrective'),
+    recommendation: g('recommendation'), recommendationOther: g('recommendationOther'), comments: g('comments'), issueIdentified: g('issueIdentified')
+  };
+  try {
+    await readPending; ui.quiz.evalResult = await api('employee', 'submit_evaluation', data); ui.quiz.again = null; await refresh(); try { ui.card = await api('employee', 'card', { id: ui.quiz.cardId }); } catch (e2) { /* the list of your evaluations updates next time */ } ui.quiz.stage = 'evalresult'; render();
+    popup('Evaluation submitted', 'Your evaluation of ' + ui.quiz.evalResult.supplier + ' was submitted successfully (' + ui.quiz.evalResult.score.toFixed(1) + '% - ' + ui.quiz.evalResult.decision + '). The Supplier Master was updated.');
+  }
   catch (err) { say('everr', 'red', err.message); $id('everr').scrollIntoView(); }
 }
 

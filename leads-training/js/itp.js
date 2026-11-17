@@ -19,8 +19,10 @@ const itpLine = (i) => (Number(i.qty) || 0) * (Number(i.budgetedPrice) || 0); //
 const itpTotal = (d) => d.items.reduce((s, i) => s + itpLine(i), 0);
 function itpBlank() {
   const m = db.itp.myManager;
-  return { id: '', ownerId: me.id, dateOfRequest: rfcToday(), dateRequired: '', department: 'IT', requestedBy: me.name, notedBy: '', subsidiary: '', chargeable: 'No', chargeableTo: '', budget: 'No', budgetAmount: '',
-    nature: 'Equipment', natureOther: '', specialInstructions: '', purpose: '', assignee: '', requestorName: me.name, lineManagerName: m ? m.name : '', lineManagerId: m ? m.id : '', itStaffName: '', sigs: {}, items: [itpItem()] };
+  return {
+    id: '', ownerId: me.id, dateOfRequest: rfcToday(), dateRequired: '', department: 'IT', requestedBy: me.name, notedBy: '', subsidiary: '', chargeable: 'No', chargeableTo: '', budget: 'No', budgetAmount: '',
+    nature: 'Equipment', natureOther: '', specialInstructions: '', purpose: '', assignee: '', requestorName: me.name, lineManagerName: m ? m.name : '', lineManagerId: m ? m.id : '', itStaffName: '', sigs: {}, items: [itpItem()]
+  };
 }
 const itpCur = () => { const z = ui.itp; return z && z.id ? db.itp.requests.find((x) => x.id === z.id) : null; };
 
@@ -36,17 +38,21 @@ function itpPage() {
 const itpStageCls = (r) => ({ draft: 'gray', assessment: 'orange', approval: 'orange', approved: 'green', received: 'blue', closed: 'gray' })[r.stage];
 function itpListView() {
   const L = db.itp.requests, tab = ui.itpTab || 'pending', admin = me.role === 'admin', n = db.itp.pending;
-  const f = tpl('tpl-itp-list', { q: ui.itpQ || '', pendingCls: tab === 'pending' ? 'active' : '', closedCls: tab === 'closed' ? 'active' : '', nPending: '(' + L.filter((r) => !r.closed).length + ')', nClosed: '(' + L.filter((r) => r.closed).length + ')',
+  const f = tpl('tpl-itp-list', {
+    q: ui.itpQ || '', pendingCls: tab === 'pending' ? 'active' : '', closedCls: tab === 'closed' ? 'active' : '', nPending: '(' + L.filter((r) => !r.closed).length + ')', nClosed: '(' + L.filter((r) => r.closed).length + ')',
     intro: admin ? 'All IT Procurement Requisition Forms. Pending forms stay here until the item is received and the form is closed; closed forms are kept in the Closed tab.' : db.itp.isIt ? 'Your forms and the submitted forms that need the IT Department. Pending forms stay here until the item is received and the form is closed.' : 'Your IT Procurement Requisition Forms. Save a form, submit it, and print it when it is approved. It stays in Pending until it is closed.',
-    needsText: n ? n + (n === 1 ? ' requisition is' : ' requisitions are') + ' waiting for you.' : '' });
+    needsText: n ? n + (n === 1 ? ' requisition is' : ' requisitions are') + ' waiting for you.' : ''
+  });
   itpFillRows(f); return f;
 }
 function itpFillRows(root) { // draws the rows of the chosen tab (also used while typing in the search box, so the cursor stays where it is)
   const tab = ui.itpTab || 'pending', q = (ui.itpQ || '').trim().toLowerCase(), isNo = /^(itp)?\s*#?\s*\d+$/.test(q), digits = q.replace(/\D/g, '');
   const L = db.itp.requests.filter((r) => (tab === 'closed' ? r.closed : !r.closed) && (!q || (isNo ? String(r.id).padStart(4, '0').includes(digits) : (itpNo(r.id) + ' ' + r.nature + ' ' + r.owner + ' ' + r.stageLabel).toLowerCase().includes(q))));
-  root.querySelector('#itp-rows').replaceChildren(...L.map((r) => tpl('tpl-itp-row', { id: r.id, no: itpNo(r.id), requested: r.dateOfRequest ? fmt(r.dateOfRequest) : '-', nature: r.nature === 'Others' && r.natureOther ? 'Others: ' + r.natureOther : r.nature,
+  root.querySelector('#itp-rows').replaceChildren(...L.map((r) => tpl('tpl-itp-row', {
+    id: r.id, no: itpNo(r.id), requested: r.dateOfRequest ? fmt(r.dateOfRequest) : '-', nature: r.nature === 'Others' && r.natureOther ? 'Others: ' + r.natureOther : r.nature,
     items: r.items.length + (r.items.length === 1 ? ' item' : ' items'), total: peso(r.total), required: r.dateRequired ? fmt(r.dateRequired) : '-', owner: r.owner || '-', stage: r.stageLabel, stageCls: itpStageCls(r),
-    needsMe: r.flags.needsMe, canEdit: r.flags.canEdit, canDelete: r.flags.canDelete })));
+    needsMe: r.flags.needsMe, canEdit: r.flags.canEdit, canDelete: r.flags.canDelete
+  })));
   const box = root.querySelector('#itp-empty'); box.replaceChildren(); root.querySelector('#itp-table').classList.toggle('hidden', !L.length);
   if (!L.length) {
     const card = document.createElement('div'), h = document.createElement('h3'), p = document.createElement('p'); card.className = 'card center'; p.className = 'muted';
@@ -79,14 +85,18 @@ function itpViewPage() {
     { label: 'Item received', who: 'IT Department' + (r.receivedAt ? ' · ' + fmt(r.receivedAt) : ''), done: idx >= 4 },
     { label: 'Closed', who: r.closedAt ? fmt(r.closedAt) : 'IT Department', done: idx >= 5 }];
   const cur = steps.findIndex((x) => !x.done);
-  const hints = { draft: mine ? 'Check the form, then press Submit requisition. Your e-signature and the e-signature of your Line Manager (' + (r.lineManagerName || 'not chosen yet') + ') are added when you submit. You cannot edit it after that.' : 'This requisition is still a draft.',
+  const hints = {
+    draft: mine ? 'Check the form, then press Submit requisition. Your e-signature and the e-signature of your Line Manager (' + (r.lineManagerName || 'not chosen yet') + ') are added when you submit. You cannot edit it after that.' : 'This requisition is still a draft.',
     assessment: F.canAssess ? 'Attach the link of your assessment and submit it. Your e-signature is added to the form.' : 'Waiting for another IT Department employee to attach the assessment.',
     approval: F.canApprove ? 'Open the assessment link and check it. If it is okay, approve it and your e-signature is added above your printed name.' : 'Waiting for the IT Manager (' + ITP_IT_MANAGER + ') to check the assessment.',
     approved: mine ? 'All e-signatures are complete. Print the form and give it to the PO. When the item arrives, the IT Department updates the status.' : 'Approved. All e-signatures are complete. The requestor prints it and gives it to the PO.',
     received: F.canClose ? 'The item was received. Close the form to move it to the Closed tab.' : 'The item was received. The IT Department will close the form.',
-    closed: 'This form is closed and kept in the Closed tab.' };
-  const f = tpl('tpl-itp-view', { id: r.id, no: itpNo(r.id), nature: r.nature, owner: r.owner || '-', stageLabel: r.stageLabel, stageCls: itpStageCls(r), hint: hints[r.stage], hasUrl: !!r.assessmentUrl && /^https?:\/\//i.test(r.assessmentUrl), url: r.assessmentUrl,
-    steps: steps.map((x, i) => ({ label: x.label, who: x.who, cls: x.done ? 'done' : i === cur ? 'current' : '' })), canEdit: F.canEdit, canSubmit: F.canSubmit, canPrint: F.canPrint, canAssess: F.canAssess, canApprove: F.canApprove, canReturn: F.canReturn, canReceive: F.canReceive, canClose: F.canClose });
+    closed: 'This form is closed and kept in the Closed tab.'
+  };
+  const f = tpl('tpl-itp-view', {
+    id: r.id, no: itpNo(r.id), nature: r.nature, owner: r.owner || '-', stageLabel: r.stageLabel, stageCls: itpStageCls(r), hint: hints[r.stage], hasUrl: !!r.assessmentUrl && /^https?:\/\//i.test(r.assessmentUrl), url: r.assessmentUrl,
+    steps: steps.map((x, i) => ({ label: x.label, who: x.who, cls: x.done ? 'done' : i === cur ? 'current' : '' })), canEdit: F.canEdit, canSubmit: F.canSubmit, canPrint: F.canPrint, canAssess: F.canAssess, canApprove: F.canApprove, canReturn: F.canReturn, canReceive: F.canReceive, canClose: F.canClose
+  });
   slot(f, 'sheet', itpSheet(r)); return f;
 }
 async function itpAct(action, extra, title, text) {
@@ -126,10 +136,12 @@ const itpPick = (list, cur) => list.map((v) => ({ v, checked: cur === v }));
 function itpFormView() {
   const d = ui.itp.draft, m = db.itp.myManager, fixed = !!m && (!d.id || d.ownerId === me.id);
   if (fixed) { d.lineManagerId = m.id; d.lineManagerName = m.name; } // the Line Manager is the immediate supervisor chosen by the admin
-  const f = tpl('tpl-itp-form', { ...d, heading: d.id ? 'Edit IT Procurement Requisition (' + itpNo(d.id) + ')' : 'New IT Procurement Requisition', itManager: ITP_IT_MANAGER, total: peso(itpTotal(d)), lmFixed: fixed,
+  const f = tpl('tpl-itp-form', {
+    ...d, heading: d.id ? 'Edit IT Procurement Requisition (' + itpNo(d.id) + ')' : 'New IT Procurement Requisition', itManager: ITP_IT_MANAGER, total: peso(itpTotal(d)), lmFixed: fixed,
     lmOpts: [{ v: '', label: 'Select a Line Manager...', sel: !d.lineManagerId }, ...db.itp.lineManagers.map((x) => ({ v: x.id, label: x.name, sel: d.lineManagerId === x.id }))],
     natures: itpPick(ITP_NATURES, d.nature), chargeables: itpPick(['Yes', 'No'], d.chargeable), budgets: itpPick(['Yes', 'No'], d.budget),
-    items: d.items.map((it, i) => ({ i, title: 'Item ' + (i + 1), qty: it.qty, unit: it.unit, description: it.description, budgetedPrice: it.budgetedPrice, lineTotal: peso(itpLine(it)) })) });
+    items: d.items.map((it, i) => ({ i, title: 'Item ' + (i + 1), qty: it.qty, unit: it.unit, description: it.description, budgetedPrice: it.budgetedPrice, lineTotal: peso(itpLine(it)) }))
+  });
   slot(f, 'sheet', itpSheet(d)); return f;
 }
 function itpDraw() { // only the printable preview and the totals are redrawn while typing, so the cursor stays where it is
@@ -161,12 +173,14 @@ function itpSheet(d) {
   const dot = (on) => (on ? '◉' : '○'), yes = (v) => v === 'Yes', S = d.sigs || {}, img = (k) => (S[k] ? S[k].img : '');
   const lines = d.items.map((i, k) => ({ n: k + 1, qty: i.qty, unit: i.unit, description: i.description, price: i.budgetedPrice === '' ? '' : peso(i.budgetedPrice), lineTotal: peso(itpLine(i)) }));
   while (lines.length < ITP_MIN_ROWS) lines.push({ n: '', qty: '', unit: '', description: '', price: '', lineTotal: '' });
-  return tpl('tpl-itp-sheet', { dateOfRequest: rfcDate(d.dateOfRequest), dateRequired: rfcDate(d.dateRequired), department: d.department, requestedBy: d.requestedBy, notedBy: d.notedBy, subsidiary: d.subsidiary,
+  return tpl('tpl-itp-sheet', {
+    dateOfRequest: rfcDate(d.dateOfRequest), dateRequired: rfcDate(d.dateRequired), department: d.department, requestedBy: d.requestedBy, notedBy: d.notedBy, subsidiary: d.subsidiary,
     chYes: dot(yes(d.chargeable)), chNo: dot(!yes(d.chargeable)), chTo: yes(d.chargeable) ? d.chargeableTo : '',
     buYes: dot(yes(d.budget)), buNo: dot(!yes(d.budget)), buAmt: yes(d.budget) && d.budgetAmount !== '' && d.budgetAmount !== null ? peso(d.budgetAmount) : '',
     natures: ITP_NATURES.map((v) => ({ mark: dot(d.nature === v), label: v === 'Others' ? 'Others :' : v, extra: v === 'Others' && d.nature === 'Others' ? d.natureOther : '' })),
     lines, total: peso(itpTotal(d)), specialInstructions: d.specialInstructions, purpose: d.purpose, assignee: d.assignee,
-    requestorName: d.requestorName, lineManagerName: d.lineManagerName, itStaffName: d.itStaffName, itManager: ITP_IT_MANAGER, reqSig: img('requestor'), lmSig: img('linemanager'), itSig: img('itstaff'), mgSig: img('itmanager') });
+    requestorName: d.requestorName, lineManagerName: d.lineManagerName, itStaffName: d.itStaffName, itManager: ITP_IT_MANAGER, reqSig: img('requestor'), lmSig: img('linemanager'), itSig: img('itstaff'), mgSig: img('itmanager')
+  });
 }
 function itpPrint() { // prints only the form: a copy of it is put at the end of the page, and the CSS hides everything else while printing
   const s = $id('itp-sheet'); if (!s) return;

@@ -16,9 +16,11 @@ function adminLayout(sec, page) {
   const supOn = (t) => sec === 'suppliers' && st === t;
   const item = (o) => ({ hasSub: !!(o.sub && o.sub.length), sub: o.sub || [], ...o });
   const actions = [
-    item({ key: 'supEval', ...lk('suppliers', 'Supplier Evaluation', sec === 'suppliers' && (st === 'dashboard' || st === 'responses'), "return supGo('dashboard')"),
+    item({
+      key: 'supEval', ...lk('suppliers', 'Supplier Evaluation', sec === 'suppliers' && (st === 'dashboard' || st === 'responses'), "return supGo('dashboard')"),
       sub: [lk('suppliers', 'Evaluation Form', supOn('form'), "return supGo('form')"), lk('suppliers', 'Corrective Action Requests', supOn('corrective'), "return supGo('corrective')"), lk('suppliers', 'Evaluation Report', supOn('calculator'), "return supGo('calculator')"), lk('suppliers', 'Supplier Master', supOn('master'), "return supGo('master')"),
-        lk('suppliers', 'Criteria Master', supOn('criteria'), "return supGo('criteria')"), lk('suppliers', 'Re-evaluation Requests', supOn('reevals'), "return supGo('reevals')")] }),
+      lk('suppliers', 'Criteria Master', supOn('criteria'), "return supGo('criteria')"), lk('suppliers', 'Re-evaluation Requests', supOn('reevals'), "return supGo('reevals')")]
+    }),
     item({ key: 'kpi', ...lk('kpi', 'KPI Matrix', sec === 'kpi'), sub: [lk('kpi', 'Add position', false, "return kpiQuick('position')"), lk('kpi', 'Add KRA', false, "return kpiQuick('kra')"), lk('kpi', 'Add KPI', false, "return kpiQuick('kpi')")] }),
     item(rfcNavItem(lk, sec)),
     item(lk('itp', 'IT Procurement Requisition' + itpBadge(), sec === 'itp', 'return itpHome()')),
@@ -85,7 +87,7 @@ function empForm(id) {
 }
 const closeEmpForm = () => document.querySelector('[data-slot="eform"]').replaceChildren();
 function saveEmp(e, id) {
-  e.preventDefault(); const v = { id }; ['name', 'employeeId', 'email', 'department', 'position', 'role'].forEach((k) => { v[k] = $id('e-' + k).value.trim(); });
+  e.preventDefault(); const v = { id };['name', 'employeeId', 'email', 'department', 'position', 'role'].forEach((k) => { v[k] = $id('e-' + k).value.trim(); });
   v.supervisorId = $id('e-supervisorId').value;
   if (!v.department) return say('eerr', 'red', 'Select a department.');
   v.password = $id('e-password').value; // not trimmed; empty on an existing account keeps the current password
@@ -104,8 +106,10 @@ function empProgress(id) {
       summary: x.info.pct + '% · ' + x.info.done + '/' + x.info.total + ' cards · Current: ' + (x.info.current ? 'Card ' + (x.info.currentIdx + 1) : 'None') + ' · Deadline ' + fmt(x.a.deadline),
       cards: x.course.cards.map((c, i) => {
         const p = prog(id, c.id);
-        return { head: 'Card ' + (i + 1) + ': ' + evalText(x.course, c.title, id), state: ' · ' + (p && p.passed ? 'Passed' : p && p.failed ? 'Failed' : p ? 'In progress' : 'Not started') + ' · Best ' + (p && p.best != null ? p.best : '-') + '%',
-          attempts: db.attempts.filter((t) => t.employeeId === id && t.cardId === c.id).map((t) => ({ text: 'Attempt ' + t.attemptNumber + ': ' + t.score + '/' + t.totalQuestions + ' · ' + (t.passed ? 'Passed' : 'Failed') + ' · ' + fmt(t.completedAt) })) };
+        return {
+          head: 'Card ' + (i + 1) + ': ' + evalText(x.course, c.title, id), state: ' · ' + (p && p.passed ? 'Passed' : p && p.failed ? 'Failed' : p ? 'In progress' : 'Not started') + ' · Best ' + (p && p.best != null ? p.best : '-') + '%',
+          attempts: db.attempts.filter((t) => t.employeeId === id && t.cardId === c.id).map((t) => ({ text: 'Attempt ' + t.attemptNumber + ': ' + t.score + '/' + t.totalQuestions + ' · ' + (t.passed ? 'Passed' : 'Failed') + ' · ' + fmt(t.completedAt) }))
+        };
       })
     }))
   });
@@ -124,11 +128,15 @@ function courseAdminPage(evalOnly) {
   const f = tpl('tpl-admin-courses', { pageTitle: evalOnly ? 'Evaluation Form' : 'Courses', isEmpty: !list.length, emptyText: evalOnly ? 'There is no evaluation form yet.' : 'There are no courses yet. Add one in Settings > Setup > Add Course.', courses: list.map((x) => ({ id: x.id, title: x.title, count: x.cards.length + ' cards', ...badgeOf(x.status), cls: ui.cid === x.id ? 'sel' : '' })) });
   if (c) {
     const info = courseInfo(me.id, c), canTake = c.status === 'Published' && c.cards.length > 0; // the admin answers courses like an employee
-    const d = tpl('tpl-course-detail', { title: c.title, status: c.status, noDraft: !ui.draft, canTake, cantTake: c.status !== 'Published', takeHref: '#/courses/' + c.id,
-      takeLabel: info.status === 'Completed' ? 'View course' : info.status === 'Not Started' ? 'Start course' : 'Continue course', mine: 'Your progress: ' + info.pct + '% · ' + info.done + '/' + info.total + ' cards', cards: c.cards.map((k, i) => ({ i, head: (i + 1) + '. ' + evalText(c, k.title, null), type: k.type.toUpperCase(), meta: k.questions.length + ' questions · pass at ' + k.passing + '%',
-      viewLabel: ui.pv === k.id ? 'Hide' : 'View', isOpen: ui.pv === k.id,
-      blocks: ui.pv === k.id ? (k.content || []).map((b) => pvBlock(c, b)) : [],
-      qs: ui.pv === k.id ? k.questions.map((q, n) => ({ text: (n + 1) + '. ' + q.text, explanation: 'Explanation: ' + q.explanation, opts: q.options.map((o, j) => ({ t: o + (j === q.answer ? '   ✓ correct answer' : ''), cls: j === q.answer ? 'ok' : '' })) })) : [] })) });
+    const d = tpl('tpl-course-detail', {
+      title: c.title, status: c.status, noDraft: !ui.draft, canTake, cantTake: c.status !== 'Published', takeHref: '#/courses/' + c.id,
+      takeLabel: info.status === 'Completed' ? 'View course' : info.status === 'Not Started' ? 'Start course' : 'Continue course', mine: 'Your progress: ' + info.pct + '% · ' + info.done + '/' + info.total + ' cards', cards: c.cards.map((k, i) => ({
+        i, head: (i + 1) + '. ' + evalText(c, k.title, null), type: k.type.toUpperCase(), meta: k.questions.length + ' questions · pass at ' + k.passing + '%',
+        viewLabel: ui.pv === k.id ? 'Hide' : 'View', isOpen: ui.pv === k.id,
+        blocks: ui.pv === k.id ? (k.content || []).map((b) => pvBlock(c, b)) : [],
+        qs: ui.pv === k.id ? k.questions.map((q, n) => ({ text: (n + 1) + '. ' + q.text, explanation: 'Explanation: ' + q.explanation, opts: q.options.map((o, j) => ({ t: o + (j === q.answer ? '   ✓ correct answer' : ''), cls: j === q.answer ? 'ok' : '' })) })) : []
+      }))
+    });
     if (ui.ce) slot(d, 'cedit', tpl('tpl-course-edit', { title: c.title, description: c.description, category: c.category, duration: c.duration, deadline: c.deadline || '' }));
     if (ui.draft) slot(d, 'cform', cardFormFrag());
     slot(f, 'detail', d);
@@ -140,12 +148,14 @@ function selCourse(id) { ui.cid = id; ui.draft = null; ui.pv = null; ui.ce = fal
 function togglePreview(i) { const k = theCourse().cards[Number(i)]; ui.pv = ui.pv === k.id ? null : k.id; render(); }
 function pvBlock(c, b) {
   const media = b[0] === 'video' || b[0] === 'image';
-  return { isH: b[0] === 'h', isP: b[0] === 'p', isUl: b[0] === 'ul', isOl: b[0] === 'ol', isWarn: b[0] === 'warn', isVideo: b[0] === 'video', isImg: b[0] === 'image',
+  return {
+    isH: b[0] === 'h', isP: b[0] === 'p', isUl: b[0] === 'ul', isOl: b[0] === 'ol', isWarn: b[0] === 'warn', isVideo: b[0] === 'video', isImg: b[0] === 'image',
     src: media ? b[1] : undefined, cap: media ? (b[2] || '') : '', text: (!media && typeof b[1] === 'string') ? evalText(c, b[1], null) : '',
-    items: Array.isArray(b[1]) ? b[1].map((t) => ({ text: evalText(c, t, null) })) : [] };
+    items: Array.isArray(b[1]) ? b[1].map((t) => ({ text: evalText(c, t, null) })) : []
+  };
 }
 async function addCourse(e) {
-  e.preventDefault(); const v = {}; ['title', 'description', 'category', 'duration', 'deadline'].forEach((k) => { v[k] = $id('nc-' + k).value.trim(); });
+  e.preventDefault(); const v = {};['title', 'description', 'category', 'duration', 'deadline'].forEach((k) => { v[k] = $id('nc-' + k).value.trim(); });
   if (!v.title || !v.description) return say('cerr', 'red', 'Course name and description are required.');
   const r = await call('admin', 'add_course', v, 'cerr');
   if (r) { ui.cid = r.id; ui.draft = null; popup('Course created', 'The course "' + v.title + '" was created. Open it in the Courses tab to add its training cards and publish it.'); go('/admin/courses'); }
@@ -165,8 +175,10 @@ function newCard() { ui.draft = { title: '', type: 'SOP', passing: 100, text: ''
 // edit a card: the material is turned back into text (see parseMaterial), the questions keep their ids so they are updated in place
 function editCard(i) {
   const k = theCourse().cards[Number(i)]; ui.pv = null;
-  ui.draft = { id: k.id, kind: k.kind, title: k.title, type: k.type, passing: k.passing, text: materialToText(k.content || []),
-    questions: (k.questions || []).map((q) => ({ id: q.id, text: q.text, options: [0, 1, 2, 3].map((j) => q.options[j] || ''), answer: q.answer, explanation: q.explanation })) };
+  ui.draft = {
+    id: k.id, kind: k.kind, title: k.title, type: k.type, passing: k.passing, text: materialToText(k.content || []),
+    questions: (k.questions || []).map((q) => ({ id: q.id, text: q.text, options: [0, 1, 2, 3].map((j) => q.options[j] || ''), answer: q.answer, explanation: q.explanation }))
+  };
   render(); setTimeout(() => { const f = $id('cardform'); if (f) f.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
 }
 function materialToText(blocks) {
@@ -175,15 +187,17 @@ function materialToText(blocks) {
 }
 function toggleCourseEdit() { ui.ce = !ui.ce; render(); }
 async function saveCourseEdit(e) {
-  e.preventDefault(); const v = { id: ui.cid }; ['title', 'description', 'category', 'duration', 'deadline'].forEach((k) => { v[k] = $id('ce-' + k).value.trim(); });
+  e.preventDefault(); const v = { id: ui.cid };['title', 'description', 'category', 'duration', 'deadline'].forEach((k) => { v[k] = $id('ce-' + k).value.trim(); });
   if (!v.title || !v.description) return say('ceerr', 'red', 'Course name and description are required.');
   const r = await call('admin', 'update_course', v, 'ceerr');
   if (r) { ui.ce = false; render(); popup('Course updated', 'The course details were saved successfully.'); }
 }
 function cardFormFrag() {
   const d = ui.draft;
-  return tpl('tpl-card-form', { heading: d.id ? 'Edit training card' : 'New training card', saveLabel: d.id ? 'Save changes' : 'Save card', showQs: d.kind !== 'evaluation', title: d.title, type: d.type, passing: d.passing, text: d.text,
-    questions: d.questions.map((q, i) => ({ i, heading: 'Question ' + (i + 1), text: q.text, o0: q.options[0], o1: q.options[1], o2: q.options[2], o3: q.options[3], answer: q.answer, explanation: q.explanation })) });
+  return tpl('tpl-card-form', {
+    heading: d.id ? 'Edit training card' : 'New training card', saveLabel: d.id ? 'Save changes' : 'Save card', showQs: d.kind !== 'evaluation', title: d.title, type: d.type, passing: d.passing, text: d.text,
+    questions: d.questions.map((q, i) => ({ i, heading: 'Question ' + (i + 1), text: q.text, o0: q.options[0], o1: q.options[1], o2: q.options[2], o3: q.options[3], answer: q.answer, explanation: q.explanation }))
+  });
 }
 function collect() { // copy what the admin typed into ui.draft before the form is redrawn
   const d = ui.draft; if (!d || !$id('cardform')) return;
@@ -315,7 +329,7 @@ function respApply(v) {
 function respNotes(v) {
   const who = (db.evaluations || []).find((e) => e.evaluatorId === v.user);
   const n = [v.user && who ? 'Evaluator: ' + who.evaluator : '', v.cat ? 'Category: ' + v.cat : '', v.rating ? 'Rating: ' + v.rating : '', v.decision ? 'Decision: ' + v.decision : '',
-    v.corr ? 'Corrective action: ' + ({ pending: 'Pending', solved: 'Solved', none: 'Not required' }[v.corr]) : '', v.from ? 'From: ' + fmt(v.from) : '', v.to ? 'To: ' + fmt(v.to) : '', v.sort ? 'Sorted: ' + RESP_SORTS[v.sort] : ''].filter(Boolean);
+  v.corr ? 'Corrective action: ' + ({ pending: 'Pending', solved: 'Solved', none: 'Not required' }[v.corr]) : '', v.from ? 'From: ' + fmt(v.from) : '', v.to ? 'To: ' + fmt(v.to) : '', v.sort ? 'Sorted: ' + RESP_SORTS[v.sort] : ''].filter(Boolean);
   return n.length ? n : ['All responses'];
 }
 function printResponses() {
@@ -356,8 +370,10 @@ function printSuppliers() {
   const notes = (v) => [v.cat ? 'Category: ' + v.cat : 'All categories', v.status ? 'Status: ' + v.status : 'All statuses', v.dept ? 'Department: ' + (v.dept === '__none' ? 'all departments' : v.dept) : '', v.due ? (v.due === 'never' ? 'Not yet evaluated' : 'Overdue evaluations') : '', v.sort ? (v.sort === 'high' ? 'Highest score first' : 'Lowest score first') : ''];
   openPrint('Supplier Master', fields, supApply, (theme, v) => printReport('Supplier Master', notes(v),
     ['Supplier ID', 'Supplier Name', 'TIN', 'Physical Address', 'Category', 'Department', 'Contact Person', 'Contact No.', 'Email', 'Status', 'Current Score', 'Last Evaluation', 'Next Evaluation'],
-    supApply(v).map((s) => { const nq = s.nextEvaluation ? qRange(s.nextEvaluation) : null; return [s.code, s.name, s.tin || '-', s.address || '-', s.category, s.department || 'All departments', s.contactPerson || '-', s.contactNo || '-', s.email || '-',
-      { t: s.status, c: DEC_CLS[s.status === 'Preferred' ? 'Preferred Supplier' : s.status] || 'gray' }, s.score == null ? '-' : s.score.toFixed(1) + '%', s.lastEvaluation ? fmt(s.lastEvaluation) : '-', nq ? nq.label + (nq.end < today ? ' (Overdue)' : '') : '-']; }), theme));
+    supApply(v).map((s) => {
+      const nq = s.nextEvaluation ? qRange(s.nextEvaluation) : null; return [s.code, s.name, s.tin || '-', s.address || '-', s.category, s.department || 'All departments', s.contactPerson || '-', s.contactNo || '-', s.email || '-',
+      { t: s.status, c: DEC_CLS[s.status === 'Preferred' ? 'Preferred Supplier' : s.status] || 'gray' }, s.score == null ? '-' : s.score.toFixed(1) + '%', s.lastEvaluation ? fmt(s.lastEvaluation) : '-', nq ? nq.label + (nq.end < today ? ' (Overdue)' : '') : '-'];
+    }), theme));
 }
 
 function latestEvals() { // the most recent evaluation of each supplier
@@ -374,7 +390,7 @@ function supReevals() {
   const L = db.reevals || [], st = (r) => (r.status === 'Pending' ? 'orange' : r.status === 'Declined' ? 'red' : 'green');
   return tableFrag('Re-evaluation Requests', ['Employee', 'Supplier', 'Supervisor', 'Reason', 'Requested', 'Status', '', ''],
     L.map((r) => [{ v: r.employee }, { v: r.supplier }, { v: r.supervisor || 'None (admin decides)' }, { v: r.reason || '-' }, { v: fmt(r.createdAt) }, bd(r.status, st(r)),
-      r.status === 'Pending' ? { btn: 'Approve', act: 'approveReeval', id: r.id } : { v: '' }, r.status === 'Pending' ? { btn: 'Decline', act: 'declineReeval', id: r.id } : { v: '' }]),
+    r.status === 'Pending' ? { btn: 'Approve', act: 'approveReeval', id: r.id } : { v: '' }, r.status === 'Pending' ? { btn: 'Decline', act: 'declineReeval', id: r.id } : { v: '' }]),
     'An approved request lets the employee submit one more evaluation of that supplier in the same quarter.');
 }
 // plain functions (not const), because the table buttons find them by name on window
@@ -389,7 +405,7 @@ function supDashboard() {
   box.append(tpl('tpl-stats', { stats: [['Total Evaluated Suppliers', n], ['Average Performance Score', avg.toFixed(1) + '%'], ['Preferred Vendor Ratio', (n ? pref / n * 100 : 0).toFixed(1) + '%'], ['Action Required Alerts', alerts]].map((x) => ({ label: x[0], value: x[1] })) }));
   // everything that is counted in Action Required Alerts, so the admin can open it
   const todo = [...L.filter((x) => x.e.decision === 'Conditional' || x.e.decision === 'Not Recommended').map((x) => ({ e: x.e, why: bd(x.e.decision, DEC_CLS[x.e.decision]) })),
-    ...db.evaluations.filter((e) => e.corrective === 'Yes' && e.correctiveStatus !== 'Resolved').map((e) => ({ e, why: bd('Pending corrective action', 'orange') }))];
+  ...db.evaluations.filter((e) => e.corrective === 'Yes' && e.correctiveStatus !== 'Resolved').map((e) => ({ e, why: bd('Pending corrective action', 'orange') }))];
   box.append(tableFrag('Action Required (' + todo.length + ')', ['Supplier', 'Reason', 'Evaluated by', 'Evaluation Date', 'Score', ''],
     todo.map((x) => [{ v: x.e.supplier }, x.why, { v: x.e.evaluator }, { v: fmt(x.e.evaluationDate) }, { v: x.e.score.toFixed(1) + '%' }, { btn: 'View', act: 'openResponse', id: x.e.id }]),
     'Suppliers whose latest evaluation is Conditional or Not Recommended, and corrective actions that are not solved yet. Click View to open the evaluation and its corrective action form.'));
@@ -426,17 +442,17 @@ function supResponses() {
   box.append(head, supEl('p', 'small muted', 'Showing ' + L.length + ' of ' + all.length + ' response(s).'));
   box.append(tableFrag('', ['Timestamp', 'Supplier Name', 'Category', 'Evaluator', 'Evaluation Date', 'Overall Score', 'Rating', 'Decision', 'Recommendation', 'Corrective Action', '', ''],
     L.map((e) => [{ v: new Date(e.timestamp).toLocaleString() }, { v: e.supplier }, { v: e.category }, { v: e.evaluator }, { v: fmt(e.evaluationDate) }, { v: e.score.toFixed(1) + '%' }, bd(e.rating, RATE_CLS[e.rating]), bd(e.decision, DEC_CLS[e.decision]), { v: e.recommendation },
-      e.corrective === 'Yes' ? bd(e.correctiveStatus === 'Resolved' ? 'Solved' : 'Pending', e.correctiveStatus === 'Resolved' ? 'green' : 'orange') : { v: '-' },
-      { btn: 'View', act: 'viewResponse', id: e.id }, { btn: 'Delete', act: 'deleteEvaluation', id: e.id }])));
+    e.corrective === 'Yes' ? bd(e.correctiveStatus === 'Resolved' ? 'Solved' : 'Pending', e.correctiveStatus === 'Resolved' ? 'green' : 'orange') : { v: '-' },
+    { btn: 'View', act: 'viewResponse', id: e.id }, { btn: 'Delete', act: 'deleteEvaluation', id: e.id }])));
   return respDetail(box);
 }
 function respDetail(box) { // the details of one response and, when corrective action is needed, the form for it
   const e = db.evaluations.find((x) => x.id === ui.supDetail);
   if (e) {
     const F = [['Timestamp', new Date(e.timestamp).toLocaleString()], ['Supplier Name', e.supplier], ['Service / Product Provided', e.service], ['Supplier Category', e.category], ['Supplier Criticality', e.criticality], ['Evaluation Date', fmt(e.evaluationDate)], ['Evaluator', e.evaluator],
-      ...e.ratings.map((r) => [r.name + ' (' + r.weight + '%)', r.rating + ' / 5']), [deptText('Does the supplier meet IT requirements?', (db.users.find((x) => x.id === e.evaluatorId) || {}).department || ''), e.meets], ['Were there significant issues?', e.issues], ['Is corrective action required?', e.corrective], ['Recommendation', e.recommendation], ['Evaluator Comments', e.comments],
-      ['Issue Identified and Corrective Action Needed', e.issueIdentified || '-'], ['Immediate Head / Supervisor', e.supervisor || '-'], ['Supplier Response / Commitment', e.supplierResponse || '-'], ['Target Completion Date', e.targetDate ? fmt(e.targetDate) : '-'], ['Responsible Person', e.responsiblePerson || '-'], ['Follow-up Required', e.followUp || '-'], ['Corrective Action Status', e.corrective === 'Yes' ? (e.correctiveStatus === 'Resolved' ? 'Solved' : 'Pending') : '-'],
-      ['Overall Score', e.score.toFixed(1) + '%'], ['Rating', e.rating], ['Decision', e.decision]];
+    ...e.ratings.map((r) => [r.name + ' (' + r.weight + '%)', r.rating + ' / 5']), [deptText('Does the supplier meet IT requirements?', (db.users.find((x) => x.id === e.evaluatorId) || {}).department || ''), e.meets], ['Were there significant issues?', e.issues], ['Is corrective action required?', e.corrective], ['Recommendation', e.recommendation], ['Evaluator Comments', e.comments],
+    ['Issue Identified and Corrective Action Needed', e.issueIdentified || '-'], ['Immediate Head / Supervisor', e.supervisor || '-'], ['Supplier Response / Commitment', e.supplierResponse || '-'], ['Target Completion Date', e.targetDate ? fmt(e.targetDate) : '-'], ['Responsible Person', e.responsiblePerson || '-'], ['Follow-up Required', e.followUp || '-'], ['Corrective Action Status', e.corrective === 'Yes' ? (e.correctiveStatus === 'Resolved' ? 'Solved' : 'Pending') : '-'],
+    ['Overall Score', e.score.toFixed(1) + '%'], ['Rating', e.rating], ['Decision', e.decision]];
     box.append(tpl('tpl-detail-list', { title: 'Response details', fields: F.map((r) => ({ label: r[0], value: r[1] })) }));
     if (e.corrective === 'Yes') // the employee said corrective action is required, so the admin fills in the rest
       box.append(tpl('tpl-corrective-form', { id: e.id, response: e.supplierResponse || '', target: e.targetDate || '', person: e.responsiblePerson || '', follow: e.followUp || '', status: e.correctiveStatus || 'Open' }));
@@ -449,9 +465,11 @@ function supCorrective() {
   const pend = (e) => e.correctiveStatus !== 'Resolved', L = all.slice().sort((a, b) => (pend(b) - pend(a)) || (new Date(a.timestamp) - new Date(b.timestamp)));
   box.append(supEl('h2', '', 'Corrective Action Requests'), supEl('p', 'small muted', all.filter(pend).length + ' pending of ' + all.length + ' request(s). The longest waiting come first.'));
   box.append(tableFrag('', ['Supplier', 'Evaluated by', 'Immediate superior', 'Evaluation date', 'Status', 'Pending for', ''],
-    L.map((e) => { const mins = (Date.now() - new Date(e.timestamp).getTime()) / 60000;
+    L.map((e) => {
+      const mins = (Date.now() - new Date(e.timestamp).getTime()) / 60000;
       return [{ v: e.supplier }, { v: e.evaluator }, { v: e.supervisor || '-' }, { v: fmt(e.evaluationDate) }, bd(pend(e) ? 'Pending' : 'Solved', pend(e) ? 'orange' : 'green'),
-        pend(e) ? bd(pendFor(e.timestamp), mins < 1440 ? 'blue' : mins < 4320 ? 'orange' : 'red') : { v: 'Solved' }, { btn: 'View', act: 'viewResponse', id: e.id }]; })));
+      pend(e) ? bd(pendFor(e.timestamp), mins < 1440 ? 'blue' : mins < 4320 ? 'orange' : 'red') : { v: 'Solved' }, { btn: 'View', act: 'viewResponse', id: e.id }];
+    })));
   return respDetail(box);
 }
 // permissions of an employee / immediate superior: a checkbox for every published course and evaluation form (new ones appear by themselves)
@@ -460,8 +478,10 @@ function permForm(id, isNew) {
   if (u.role === 'admin') return popup('Admin account', 'The admin already has access to everything.');
   const mine = db.assignments.filter((a) => a.employeeId === id).map((a) => a.courseId);
   const items = db.courses.filter((c) => c.status === 'Published').map((c) => ({ cid: c.id, title: c.title.replace(/^IT\s+/i, ''), kind: isEvalCourse(c) ? 'Evaluation form' : 'Course', desc: [c.category, c.duration].filter(Boolean).join(' · ') || ' ' }));
-  slot(document, 'eperm', tpl('tpl-emp-perm', { id, heading: (isNew ? 'Step 2 of 2: ' : '') + 'Set permissions for ' + u.name + ' (' + (ROLE_LABEL[u.role] || u.role) + ')',
-    intro: 'Tick what this ' + (u.role === 'superior' ? 'immediate superior' : 'employee') + ' is allowed to answer. Courses and evaluation forms you publish later appear in this list automatically.', items, empty: !items.length }));
+  slot(document, 'eperm', tpl('tpl-emp-perm', {
+    id, heading: (isNew ? 'Step 2 of 2: ' : '') + 'Set permissions for ' + u.name + ' (' + (ROLE_LABEL[u.role] || u.role) + ')',
+    intro: 'Tick what this ' + (u.role === 'superior' ? 'immediate superior' : 'employee') + ' is allowed to answer. Courses and evaluation forms you publish later appear in this list automatically.', items, empty: !items.length
+  }));
   document.querySelectorAll('#permform input[type=checkbox]').forEach((cb) => { cb.checked = mine.includes(cb.dataset.course); });
   const s = document.querySelector('[data-slot="eperm"]'); if (s) s.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -529,9 +549,12 @@ function exportSuppliers() {
   if (!window.XLSX) return xlMissing();
   const L = ui.supShown || [], today = new Date().toISOString().slice(0, 10);
   if (!L.length) return popup('Nothing to export', 'There are no suppliers to export. Clear the filters or add a supplier first.');
-  const rows = L.map((s) => { const nq = s.nextEvaluation ? qRange(s.nextEvaluation) : null; return {
-    'Supplier ID': s.code, 'Supplier Name': s.name, 'Category': s.category, 'Department': s.department || '', 'Contact Person': s.contactPerson || '', 'Contact No.': s.contactNo || '', 'Email': s.email || '', 'TIN': s.tin || '', 'Physical Address': s.address || '',
-    'Status': s.status, 'Current Score': s.score == null ? '' : Number(s.score.toFixed(1)), 'Last Evaluation': s.lastEvaluation ? fmt(s.lastEvaluation) : '', 'Next Evaluation': nq ? nq.label + (nq.end < today ? ' (Overdue)' : '') : '' }; });
+  const rows = L.map((s) => {
+    const nq = s.nextEvaluation ? qRange(s.nextEvaluation) : null; return {
+      'Supplier ID': s.code, 'Supplier Name': s.name, 'Category': s.category, 'Department': s.department || '', 'Contact Person': s.contactPerson || '', 'Contact No.': s.contactNo || '', 'Email': s.email || '', 'TIN': s.tin || '', 'Physical Address': s.address || '',
+      'Status': s.status, 'Current Score': s.score == null ? '' : Number(s.score.toFixed(1)), 'Last Evaluation': s.lastEvaluation ? fmt(s.lastEvaluation) : '', 'Next Evaluation': nq ? nq.label + (nq.end < today ? ' (Overdue)' : '') : ''
+    };
+  });
   const ws = XLSX.utils.json_to_sheet(rows, { header: SUP_XL }), wb = XLSX.utils.book_new();
   ws['!cols'] = [12, 30, 20, 20, 22, 16, 28, 20, 40, 16, 14, 16, 30].map((w) => ({ wch: w }));
   XLSX.utils.book_append_sheet(wb, ws, 'Supplier Master'); XLSX.writeFile(wb, 'Supplier_Master_' + today + '.xlsx');
@@ -593,8 +616,10 @@ function importSuppliers(inp) {
       if (!head.some((h) => NAME_KEYS.includes(h))) return invalidFile('The first row of the file does not have the column "Supplier Name", so it does not follow the Supplier Master template.');
       sheet = XLSX.utils.sheet_to_json(ws, { defval: '', raw: false });
     } catch (e) { return invalidFile(); }
-    const data = sheet.map((r, i) => ({ row: i + 2, code: pick(r, ['supplierid', 'suppliercode', 'id', 'code']), name: pick(r, NAME_KEYS), category: pick(r, ['category']), department: pick(r, ['department']),
-      contactPerson: pick(r, ['contactperson', 'contact']), contactNo: pick(r, ['contactno', 'contactnumber', 'phone', 'mobile']), email: pick(r, ['email', 'emailaddress']), tin: pick(r, ['tin', 'tinnumber', 'taxidentificationnumber', 'taxid']), address: pick(r, ['physicaladdress', 'address', 'supplieraddress', 'businessaddress']) })).filter((r) => r.code || r.name || r.category || r.email);
+    const data = sheet.map((r, i) => ({
+      row: i + 2, code: pick(r, ['supplierid', 'suppliercode', 'id', 'code']), name: pick(r, NAME_KEYS), category: pick(r, ['category']), department: pick(r, ['department']),
+      contactPerson: pick(r, ['contactperson', 'contact']), contactNo: pick(r, ['contactno', 'contactnumber', 'phone', 'mobile']), email: pick(r, ['email', 'emailaddress']), tin: pick(r, ['tin', 'tinnumber', 'taxidentificationnumber', 'taxid']), address: pick(r, ['physicaladdress', 'address', 'supplieraddress', 'businessaddress'])
+    })).filter((r) => r.code || r.name || r.category || r.email);
     if (!data.length) return invalidFile('The file has the right columns, but it has no supplier rows.');
     // how many rows will update an existing supplier (the server makes the real decision)
     const known = db.suppliers || [], low = (v) => String(v || '').toLowerCase();
@@ -730,7 +755,7 @@ function deleteSupplier(id) {
   call('admin', 'delete_supplier', { id });
 }
 async function saveSupplier(e, id) {
-  e.preventDefault(); const v = { id }; ['name', 'category', 'contactPerson', 'contactNo', 'email', 'department', 'tin', 'address'].forEach((k) => { const el = $id('s-' + k); v[k] = el ? el.value.trim() : ''; });
+  e.preventDefault(); const v = { id };['name', 'category', 'contactPerson', 'contactNo', 'email', 'department', 'tin', 'address'].forEach((k) => { const el = $id('s-' + k); v[k] = el ? el.value.trim() : ''; });
   if (!v.name) return say('serr', 'red', 'Enter the supplier name.');
   const files = [], one = $id('s-att2303').files[0];
   if (one) files.push({ kind: '2303', file: one });
@@ -804,9 +829,11 @@ function adminSupport() {
   return tpl('tpl-admin-support', {
     tabs: ['All', 'Open', 'Resolved'].map((t) => ({ key: t, label: t + (t === 'All' ? '' : ' (' + db.requests.filter((r) => r.status === t).length + ')'), cls: f === t ? 'on' : '' })),
     empty: !list.length, emptyText: 'No support requests here.',
-    requests: list.map((r) => ({ id: r.id, subject: r.subject, message: r.message, from: r.name + ' · ' + r.email + ' · ' + new Date(r.createdAt).toLocaleString(),
+    requests: list.map((r) => ({
+      id: r.id, subject: r.subject, message: r.message, from: r.name + ' · ' + r.email + ' · ' + new Date(r.createdAt).toLocaleString(),
       statusLabel: r.status === 'Resolved' ? '✓ Resolved' : '● Open', statusCls: r.status === 'Resolved' ? 'green' : 'blue',
-      nextStatus: r.status === 'Resolved' ? 'Open' : 'Resolved', toggleLabel: r.status === 'Resolved' ? 'Reopen' : 'Mark as resolved' }))
+      nextStatus: r.status === 'Resolved' ? 'Open' : 'Resolved', toggleLabel: r.status === 'Resolved' ? 'Reopen' : 'Mark as resolved'
+    }))
   });
 }
 function supFilter(t) { ui.sfilter = t; render(); }
